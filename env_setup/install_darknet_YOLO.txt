@@ -1,0 +1,38 @@
+Darknet is an open source Neural Networks framework wriiten in C and CUDA. I use YOLO Real Time Object detection model from darknet in this project.
+
+1. git clone https://github.com/thtrieu/darkflow
+
+2. cd darkflow
+
+3. sudo python3 setup.py build_ext --inplace
+
+4. sudo pip3 install .
+
+5. Open darkflow/utils/loader.py in text editor
+        Modify lineline 121 self.offset = 16 to self.offset = 20
+
+6. cp labels.txt labels_orig.txt
+
+7. nano labels.txt 
+
+8. cd ~/darkflow
+
+9. wget https://raw.githubusercontent.com/pjreddie/darknet/master/cfg/yolov2-tiny.cfg
+
+10. wget https://pjreddie.com/media/files/yolov2-tiny.weights
+
+11. wget https://raw.githubusercontent.com/pjreddie/darknet/master/data/coco.names
+
+12. cp coco.names labels.txt
+
+13. python3 flow --model yolov2-tiny.cfg --load yolov2-tiny.weights --savepb
+
+14. cd built_graph/
+
+15. export PYTHONPATH="${PYTHONPATH}:/opt/movidius/caffe/python"
+
+16. mvNCCompile yolov2-tiny.pb -s 12 -in input -on output -o yolov2-tiny.graph
+
+18. wget -O mymovidius_yolo_test.zip "https://drive.google.com/uc?export=download&id=13KK_coUsmk0OSyHD6JYRJV7nd-i98w5c"
+
+19. sudo ln -s /home/pi/darkflow/darkflow/ /home/pi/yolo_test/
