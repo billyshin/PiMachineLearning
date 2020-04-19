@@ -32,4 +32,6 @@ This project is a Real-Time Object Detection program written that runs on ARM ma
     - darkflow
   - Install VNC on Raspberry Pi 4 for GUI
   
-Since I don't have the camera module for Raspberry Pi 4, I use recorded video for testing. Real-time object detection using camera will be added once I get the camera module.
+### TODO:
+
+Since I don't have a camera module for Raspberry Pi 4, I use recorded video for testing. Real-time object detection feature using camera will be added once I get the camera module.
