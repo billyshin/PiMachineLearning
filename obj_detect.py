@@ -1,85 +1,108 @@
+import sys
 import json
 import time
-import argparse
+import getopt
 import cv2
 import numpy as np
 import mvnc.mvncapi as mvncapi
 import movidus_utils
 import yolo_utils
 
-def inference_video(graph_file, 
-                    meta_file, 
-                    video_in_name, 
-                    video_out_name, 
-                    threshold): 
+def detect_object_in_video(graph_file, meta_file, video_in_name, video_out_name, threshold): 
+    # Retrieve meta data from YOLO
     meta = yolo_utils.get_meta(meta_file)
-    meta['thresh'] = threshold   
-    dev = movidus_utils.get_mvnc_device()
-    graph, input_fifo, output_fifo = movidus_utils.load_graph(dev, graph_file)
-    cap = cv2.VideoCapture()
-    cap.open(video_in_name)
-    fps = int(cap.get(cv2.CAP_PROP_FPS))  
-    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) ) 
-    height= int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) 
+    # Set threshold
+    meta['thresh'] = threshold
+
+    # Set up mvnc device using movidius
+    device = movidus_utils.get_mvnc_device()
+    graph, input_fifo, output_fifo = movidus_utils.load_graph(device, graph_file)
+
+    # Load and configure video file using cv2
+    video_in = cv2.VideoCapture()
+    video_in.open(video_in_name)
+    fps = int(video_in.get(cv2.CAP_PROP_FPS))  
+    width = int(video_in.get(cv2.CAP_PROP_FRAME_WIDTH) ) 
+    height= int(video_in.get(cv2.CAP_PROP_FRAME_HEIGHT)) 
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    out = cv2.VideoWriter(video_out_name, fourcc, fps, (width,height))
+    video_out = cv2.VideoWriter(video_out_name, fourcc, fps, (width,height))
+
     times = []
+
     while True:
-        ret, frame = cap.read()
-        if not ret:
+        has_video, frame = video_in.read()
+        # Check if we have finished loading video
+        if not has_video:
             print("Video Ended")
             break   
-        frame_orig = np.copy(frame)
-        img_orig_dimensions = frame_orig.shape
+
+        # Pre-process image using frame and meta data
+        original_frame = np.copy(frame)
+        original_image_dimensions = original_frame.shape
         frame = yolo_utils.pre_proc_img(frame, meta)
+
         start = time.time()
-        graph.queue_inference_with_fifo_elem(
-            input_fifo, output_fifo, frame, 'user object')
+
+        # Perform object detection
+        graph.queue_inference_with_fifo_elem(input_fifo, output_fifo, frame, 'user object')
         output, _ = output_fifo.read_elem()
+
         end = time.time()
+        
         print('FPS: {:.2f}'.format((1 / (end - start))))
+        
         times.append((1/ (end - start)))
+        
+        # Present result in output video
         y_out = np.reshape(output, (13, 13,125))
         y_out = np.squeeze(y_out)
-        boxes = yolo_utils.procces_out(y_out, meta, img_orig_dimensions)
-        yolo_utils.add_bb_to_img(frame_orig, boxes)
-        out.write(frame_orig)
-    cap.release()
-    out.release()
+        boxes = yolo_utils.procces_out(y_out, meta, original_image_dimensions)
+        yolo_utils.add_bb_to_img(original_frame, boxes)
+        video_out.write(original_frame)
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument(
-        "-i", "--input_video", 
-        required=True, 
-        help="path to input video")
-    ap.add_argument(
-        "-o", "--output_video", 
-        required=False,
-        default='out.avi',
-        help="path to output video")
-    ap.add_argument(
-        "-m", "--meta_file", 
-        required=False,
-        default='built_graph/tiny-yolo-voc.meta',
-        help="path to meta file")
-    ap.add_argument(
-        "-mg", "--movidius_graph", 
-        required=False,
-        default= 'built_graph/tiny-yolo-voc.graph',
-        help="path to movidius graph")
-    ap.add_argument(
-        "-th", "--threshold", 
-        required=False,
-        default = 0.3, 
-        help="threshold")
-    args = ap.parse_args()
-    inference_video(
-        args.movidius_graph, 
-        args.meta_file, 
-        args.input_video, 
-        args.output_video, 
-        args.threshold)
+    video_in.release()
+    video_out.release()
+
+def print_usage():
+    print("python3 obj_detect.py --input=video_in.mp4 --output=video_out.mp4 --graph=yolov2-tiny.graph --meta=yolov2-tiny.meta --threshold=0.3")
+
+def main(argv):
+    # Default Threshold value
+    threshold = 0.3
+
+    try:
+        opts, args = getopt.getopt(argv, "hiomgt", ["help", "input=", "output=", "meta=", "graph=", "threshold="])
+    except getopt.GetoptError:
+        print_usage()
+        sys.exit(2)
+    
+    for opt, arg in opts:
+        if opt in ("-h", "--help"):
+            print_usage()
+            sys.exit(0)
+        elif opt in ("-i", "--input"):
+            video_in = arg
+        elif opt in ("-o", "--output"):
+            video_out = arg
+        elif opt in ("m", "--meta"):
+            meta = arg
+        elif opt in ("-g", "--graph"):
+            graph = arg
+        elif opt in ("-t", "--threshold"):
+            threshold = int(arg)
+
+    # Check that all parameters were correctly received
+    try:
+        video_in
+        video_out
+        meta
+        graph
+        threshold
+    except NameError:
+        print_usage()
+        sys.exit(2)
+
+    detect_object_in_video(graph, meta, video_in, video_out, threshold)
 
 if __name__ == '__main__':
     main()
