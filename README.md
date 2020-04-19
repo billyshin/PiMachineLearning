@@ -1,6 +1,6 @@
 # PiMachineLearning
 
-This repo consists of multiple ARM Machine Learning projects.
+This repo consists of multiple ARM Machine Learning projects. Raspbeery Pi is used for the entire projects.
 
 ## Introduction
 
