@@ -1,0 +1,44 @@
+These steps are only tested on Raspberry Pi 4.
+
+1. Open /etc/dphys-swapfile in text editor 
+    Modify CONF_SWAPSIZE=100 to CONF_SWAPSIZE=2048
+
+2. sudo /etc/init.d/dphys-swapfile restart swapon -s
+
+3. This step can be skipped if you've already had python3, pip3 and cypthon3 installed
+    sudo apt-get install mc python3-pip cython3
+
+4. Install Software Development Kit for movidius
+    cd ~
+    wget https://ncs-forum-uploads.s3.amazonaws.com/ncsdk/ncsdk-02_05_00_02-full/ncsdk-2.05.00.02.tar.gz
+    tar -xzvf ncsdk-2.05.00.02.tar.gz
+    cd ncsdk-2.05.00.02.tar.gz
+
+5. Configure movidius skipped
+    Open ncsdk-2.05.00.02 in text editor
+        Modify #MAKE_NJOBS=1 to MAKE_NJOBS=1
+
+6. Install required Python3 Library
+    sudo apt install cython
+    sudo -H pip3 install cython
+    sudo -H pip3 install numpy
+    sudo -H pip3 install pillow
+    sudo pip3 uninstall tensorflow
+    wget https://github.com/lhelontra/tensorflow-on-arm/releases/download/v1.4.0/tensorflow-1.4.0-cp35-none-linux_armv7l.whl
+    sudo pip3 install tensorflow-1.4.0-cp35-none-linux_armv7l.whl
+    rm tensorflow-1.4.0-cp35-none-linux_armv7l.whl
+    sudo nano install-opencv.sh
+    sudo make install
+
+7. Install necessary library for movidius
+    sudo apt install libjasper1 libcanberra-gtk0
+    git clone -b ncsdk2 https://github.com/movidius/ncappzoo
+    cd ncappzoo/apps/hello_ncs_py
+
+8. Install opencv
+    sudo ./install-opencv.sh
+
+9. Open /etc/dphys-swapfile in text editor 
+    Modify CONF_SWAPSIZE=12048 to CONF_SWAPSIZE=100
+
+10. sudo /etc/init.d/dphys-swapfile restart swapon -s
